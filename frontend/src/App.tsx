@@ -3,8 +3,10 @@ import { useEffect } from 'react'
 import './App.css'
 
 type Comment = {
+  id: string;
   timestamp: string;
   message: string;
+  likes: number;
 };
 
 function App() {
@@ -61,6 +63,24 @@ function App() {
     setMessage("");
   }
 
+  async function likeComment(id: string) {
+    const response = await fetch(`/api/comments/${id}/likes`, {
+      method: "POST",
+    });
+
+    if (!response.ok) {
+      return;
+    }
+
+    const updatedComment: Comment = await response.json();
+
+    setComments((currentComments) =>
+      currentComments.map((comment) =>
+        comment.id === id ? updatedComment : comment
+      )
+    );
+  }
+
   return (
     <>
       <h1>{title}</h1>
@@ -89,6 +109,16 @@ function App() {
               <small>
                 {new Date(comment.timestamp).toLocaleString()}
               </small>
+
+              <button
+                type="button"
+                className="like-link"
+                onClick={() =>
+                  likeComment(comment.id)
+                }
+              >
+                ❤️ {comment.likes}
+              </button>
             </div>
           ))}
         </div>
