@@ -25,14 +25,14 @@ def get_comments():
 def add_comment():
     data = request.get_json()
 
-    message = data.get("input")
+    message = data.get("message")
 
-    if not input:
+    if not message:
         return jsonify({"error": "message is required"}), 400
 
     new_comment = {
         "timestamp": datetime.now(timezone.utc).isoformat(),
-        "input": message
+        "message": message
     }
 
     try:
