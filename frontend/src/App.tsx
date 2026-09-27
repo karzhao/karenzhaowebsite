@@ -116,6 +116,7 @@ function App() {
                 onClick={() =>
                   likeComment(comment.id)
                 }
+                title="Like"
               >
                 ❤️ {comment.likes}
               </button>
