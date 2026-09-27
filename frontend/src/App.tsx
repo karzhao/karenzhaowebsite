@@ -1,101 +1,49 @@
-import { useState } from 'react'
-import { useEffect } from 'react'
-import './App.css'
+import json
+from datetime import datetime, timezone
+from pathlib import Path
 
-type Comment = {
-  timestamp: string;
-  input: string;
-};
+from flask import Blueprint, jsonify, request
 
-function App() {
-  const [title, setTitle] = useState('title')
-  const [message, setMessage] = useState('message')
-  const [input, setInput] = useState('')
 
-  const [comments, setComments] = useState<Comment[]>([]);
+comments_bp = Blueprint("comments", __name__)
 
-  useEffect(() => {
-    fetch("/api/hello")
-      .then(res => res.json())
-      .then(data => setTitle(data.message))
-  })
+COMMENTS_FILE = Path(__file__).parent.parent / "data" / "comments.json"
 
-  useEffect(() => {
-    fetch("/api/karen")
-      .then(res => res.json())
-      .then(data => setMessage(data.message))
-  })
 
-   useEffect(() => {
-    fetch("/api/comments")
-      .then((response) => response.json())
-      .then((data: Comment[]) => {
-        setComments([...data].reverse());
-      });
-  }, []);
+@comments_bp.get("/api/comments")
+def get_comments():
+    try:
+        with open(COMMENTS_FILE, "r") as f:
+            comments = json.load(f)
+    except FileNotFoundError:
+        comments = []
 
-  async function submitComment(event: React.FormEvent<HTMLFormElement>) {
-    event.preventDefault();
+    return jsonify(comments)
 
-    if (!message.trim()) {
-      return;
+
+@comments_bp.post("/api/comments")
+def add_comment():
+    data = request.get_json()
+
+    message = data.get("message")
+
+    if not message:
+        return jsonify({"error": "message is required"}), 400
+
+    new_comment = {
+        "timestamp": datetime.now(timezone.utc).isoformat(),
+        "message": message
     }
 
-    const response = await fetch("/api/comments", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        message,
-      }),
-    });
+    try:
+        with open(COMMENTS_FILE, "r") as f:
+            comments = json.load(f)
+    except FileNotFoundError:
+        comments = []
 
-    const newComment: Comment = await response.json();
+    comments.append(new_comment)
 
-    setComments((currentComments) => [
-      newComment,
-      ...currentComments,
-    ]);
+    with open(COMMENTS_FILE, "w") as f:
+        json.dump(comments, f, indent=2)
 
-    setMessage("");
-  }
-
-  return (
-    <>
-      <h1>{title}</h1>
-      <h3>{message}</h3>
-      <div className="comment-box">
-        <h1>Leave a Comment</h1>
-
-        <form onSubmit={submitComment}>
-          <textarea
-            value={input}
-            onChange={(event) => setInput(event.target.value)}
-            placeholder="Write a comment..."
-          />
-
-          <button type="submit">Post</button>
-        </form>
-
-        <div className="comments">
-          {comments.map((comment) => (
-            <div
-              className="comment"
-              key={comment.timestamp}
-            >
-              <p>{comment.input}</p>
-
-              <small>
-                {new Date(comment.timestamp).toLocaleString()}
-              </small>
-            </div>
-          ))}
-        </div>
-      </div>
-    </>
-
-  )
-}
-
-export default App
+    return jsonify(new_comment), 201
